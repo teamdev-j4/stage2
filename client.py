@@ -1,3 +1,10 @@
+import socket
+import threading
+
+# -------------------------------
+# ユーザー登録 / ルーム作成・参加
+# 担当：wmelon89
+# -------------------------------
 class TCP_Client:
     def __init__(self, username, operation, room_name):
         """
@@ -16,6 +23,7 @@ class TCP_Client:
         """
         TCPサーバに接続する。
 
+        返り値
         - 接続成功ならTrue
         - 失敗ならFalse
         """
@@ -28,7 +36,7 @@ class TCP_Client:
         処理内容:
         - リクエスト送信
         - 応答受信
-        - トークン取得 self.token = 取得したtoken
+        - トークン取得
         """
         pass
 
@@ -36,7 +44,10 @@ class TCP_Client:
         return self.token
 
 
-
+# -------------------------------
+# チャットメッセージング
+# 担当：kokinomu_blip
+# -------------------------------
 class UDP_Client:
     def __init__(self, username, room_name, token):
         """
@@ -48,7 +59,7 @@ class UDP_Client:
         - 認証トークン
         - サーバアドレス（IP, PORT）
         - ソケット生成
-        - 終了制御用イベント（stop_event）
+        - 終了制御用イベント（threading.Event()）
         """
         pass
 
@@ -69,20 +80,20 @@ class UDP_Client:
 
         処理内容:
         - UDPでデータを受信
-        - UCRPプロトコルでパケットを解析
-        - メッセージを標準出力に表示
+        - UCRPプロトコル(parse_packet)でパケットを解析
+        - メッセージを標準出力(print)に表示
         """
         pass
 
     def send_loop(self):
         """
-        ユーザー入力を取得し、サーバへ送信する。
+        ユーザー入力(input)を取得し、サーバへ送信する。
 
         処理内容:
         - 標準入力からメッセージを取得
-        - 最大パケットサイズをチェック
-        - UCRPプロトコルでパケット生成
-        - UDPで送信
+        - 最大パケットサイズ(4096Bite)をチェック
+        - UCRPプロトコルでパケット生成(build_packet)
+        - UDPで送信(sendto())
         - stop_eventが立ったら終了
         """
         pass
@@ -91,13 +102,10 @@ class UDP_Client:
 # -------------------------------
 # メイン処理
 # -------------------------------
-"""
-操作コードやユーザネームなどは
-サーバに接続する"前に" 入力・バリデーションまで行い、
-TCPクライアントのインスタンスに持たせて使う形を検討しています。
-"""
 class ChatClient:
     def run(self):
+        # ユーザ入力start
+        # 既存ルームの表示機能を実装する場合、ユーザ入力（ユーザ入力start〜endまで）はTCP接続後に変更してくださいm(_ _)m
         print("=== Online Chat Messenger ===")
         print("[ Operation List ]")
         print("- 1: Create room.")
@@ -114,6 +122,7 @@ class ChatClient:
 
         room_name = input("> Room name: ")
         username = input("> User name: ")
+        # ユーザ入力 end
 
         # ------------------
         # ユーザ・ルーム登録
