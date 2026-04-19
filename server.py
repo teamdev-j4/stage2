@@ -166,29 +166,36 @@ class RoomManager:
         """
         pass
 
+# -------------------------------
+# ルームクラス
+# -------------------------------
 class Room:
-    def add_client(self, token, username, addr=None):
-        """
-        ルームに新しいクライアントを追加する。
+    def __init__(self, name, host_token):
+        self.name = name
+        self.host_token = host_token
+        self.clients = {}
 
-        処理内容:
-        - tokenをキーにクライアント情報を保存
-        - username, addr, 最終通信時刻を記録
-        """
-        pass
+    def get_clients(self):
+        return self.clients.items()
+
+    def add_client(self, token, username, addr=None):
+        self.clients[token] = {
+            "username": username,
+            "addr": addr,
+            "last_seen": time.time()
+        }
+        print(f'+ added {self.clients[token]["username"]}')
+        return
 
     def delete_client(self, token):
-        """
-        クライアントをルームから削除する。
+        if token in self.clients:
+            username = self.clients[token]["username"]
+            del self.clients[token]
 
-        処理内容:
-        - tokenに対応するクライアントを削除
-        - ホストが退出した場合はルーム削除を通知
+            if token == self.host_token:
+                return "HOST_LEFT", f"- room host {username} left."
 
-        戻り値:
-        - ("HOST_LEFT", メッセージ) または ("OK", メッセージ)
-        """
-        pass
+            return "OK", f"- {username} left."
 
 
 
