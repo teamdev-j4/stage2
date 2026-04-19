@@ -95,8 +95,8 @@ class UCRP:
         pass
 
     # パケットを作成する。
-    @classmethod
-    def build_packet(self, room_name, token, msg):
+    @staticmethod
+    def build_packet(room_name, token, msg):
         room_name_b = room_name.encode("utf-8")
         token_b = token.encode("utf-8")
         msg_b = msg.encode("utf-8")
