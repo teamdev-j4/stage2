@@ -122,6 +122,9 @@ class SocketHelper:
         while len(data) < size:
             chunk = sock.recv(size - len(data))
             if not chunk:
-                raise ConnectionError
+                raise ConnectionError(
+                    f"Connection closed before receiving expected bytes "
+                    f"(excepted: {size} byte, received: {len(data)} byte)"
+                )
             data += chunk
         return data
