@@ -116,55 +116,58 @@ class UDP_Server:
 # 担当：Nonnok
 # -------------------------------
 class RoomManager:
-    def __init__():
-        rooms = {} # Roomクラスのインスタンスが入ります
-        lock = threading.lock()
-
-    # ルーム名でRoomインスタンスを取得
-    def get_room(self, room):
-        with self.lock:
-            return self.rooms[room]
-
-    # ルーム名とトークンで、クライアントを取得
-    def get_client(self, room, token):
-        with self.lock:
-            return self.rooms[room].clients[token]
-
-    # ルーム名でルームのクライアント全体を取得
-    def get_room_members(self, room):
-        with self.lock:
-            return self.rooms[room].clients
+    def __init__(self):
+        self.rooms = {}
+        self.lock = threading.RLock()
 
     def create_room(self, room_name, username):
-        """
-        新しいチャットルームを作成する。
+        with self.lock:
+            # ルーム名の重複を排除
+            if room_name in self.rooms:
+                return False, f'[Failure] room name "{room_name}" is already exists.'
 
-        処理内容:
-        - 既存ルームとの重複チェック
-        - ホスト用トークンを生成
-        - Roomインスタンスを作成
-        - ホストをクライアントとして登録
-        - rooms辞書に追加
-
-        戻り値:
-        - (True, トークン) または (False, エラーメッセージ)
-        """
-        pass
+            host_token = secrets.token_hex(16)
+            room = Room(room_name, host_token)
+            success, _ = room.add_client(host_token, username)
+            if success:
+                print(f'[Success] room name "{room_name}" created.')
+                self.rooms[room_name] = room
+                return True, host_token
+            else:
+                return False, "failed to add host"
 
     def join_room(self, room_name, username):
-        """
-        既存ルームに参加する。
+        with self.lock:
+            room = self.rooms.get(room_name)
+        if room is None:
+            return False, f'room "{room_name}" does not exist.'
 
-        処理内容:
-        - ルームの存在確認
-        - ユーザー名の重複チェック
-        - トークン生成
-        - クライアント追加
+        token = secrets.token_hex(16)
+        ok, result = room.add_client(token, username)
+        if ok:
+            return True, token
+        else:
+            return False, result
 
-        戻り値:
-        - (True, トークン) または (False, エラーメッセージ)
-        """
-        pass
+    def leave_room(self, room_name, token):
+        with self.lock:
+            room = self.rooms.get(room_name)
+
+        if room is None:
+            return False, "room not found."
+
+        status, username = room.delete_client(token)
+
+        if status == "HOST_LEFT":
+            with self.lock:
+                self.rooms.pop(room_name, None)
+            return True, f"- host {username} left, room closed."
+
+        if status == "OK":
+            return True, f"- {username} left."
+
+        return False, "client not found."
+
 
 class Room:
     def add_client(self, token, username, addr=None):
