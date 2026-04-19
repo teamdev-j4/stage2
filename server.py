@@ -174,28 +174,31 @@ class Room:
         self.name = name
         self.host_token = host_token
         self.clients = {}
+        self.lock = threading.Lock()
 
     def get_clients(self):
         return self.clients.items()
 
     def add_client(self, token, username, addr=None):
-        self.clients[token] = {
-            "username": username,
-            "addr": addr,
-            "last_seen": time.time()
-        }
+        with self.lock:
+            self.clients[token] = {
+                "username": username,
+                "addr": addr,
+                "last_seen": time.time()
+            }
         print(f'+ added {self.clients[token]["username"]}')
         return
 
     def delete_client(self, token):
-        if token in self.clients:
-            username = self.clients[token]["username"]
-            del self.clients[token]
+        with self.lock:
+            if token in self.clients:
+                username = self.clients[token]["username"]
+                del self.clients[token]
 
-            if token == self.host_token:
-                return "HOST_LEFT", f"- room host {username} left."
+                if token == self.host_token:
+                    return "HOST_LEFT", f"- room host {username} left."
 
-            return "OK", f"- {username} left."
+                return "OK", f"- {username} left."
 
 
 
