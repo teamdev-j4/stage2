@@ -6,68 +6,71 @@
 class TCRP:
     HEADER_SIZE = 32
 
-    def recv_packet(sock):
-        """
-        TCPパケットを受信し、内容を解析する。
+    OPERATION = {
+    "create_room": 1,
+    "join_room": 2,
+    }
 
-        処理内容:
-        - ヘッダを固定長で受信
-        - ヘッダから以下を取得
-            - room_nameの長さ
-            - operation
-            - state
-            - payloadの長さ
-        - ボディを受信
-        - room_nameとpayloadをデコード
+    STATE = {
+        "request": 0,
+        "response": 1,
+        "complete": 2,
+    }
 
-        戻り値:
-        - (operation, state, room_name, payload)
-        """
-        pass
+    @classmethod
+    # 受け取って解析し、結果を返す。
+    def recv_packet(self, sock):
+        header = SocketHelper.recv_exact(sock, self.HEADER_SIZE)
+        room_name_len, operation, state, payload_len = self.parse_header(header)
 
+        body = SocketHelper.recv_exact(sock, room_name_len + payload_len)
+        room_name, payload = self.parse_body(body, room_name_len, payload_len)
+
+        return operation, state, room_name, payload
+
+    # ヘッダー部分の解析
+    @staticmethod
     def parse_header(header):
-        """
-        ヘッダ部分を解析する。
+        room_name_len = header[0]
+        operation = header[1]
+        state = header[2]
+        payload_len = int.from_bytes(header[3:32], "big")
 
-        内容:
-        - 1byte : room_name長
-        - 1byte : operation
-        - 1byte : state
-        - 29byte: payload長
+        return room_name_len, operation, state, payload_len
 
-        戻り値:
-        - (room_name_len, operation, state, payload_len)
-        """
-        pass
-
+    # ボディー部分の解析
+    @staticmethod
     def parse_body(body, room_name_len, payload_len):
-        """
-        ボディ部分を解析する。
+        room_name = body[:room_name_len].decode("utf-8")
+        payload = body[room_name_len:].decode("utf-8")
 
-        処理内容:
-        - 前半をroom_nameとしてデコード
-        - 後半をpayloadとしてデコード
+        return room_name, payload
 
-        戻り値:
-        - (room_name, payload)
-        """
-        pass
+    # TCPパケットを生成して送信する。
+    @classmethod
+    def send_packet(self, sock, room_name, operation, state, payload):
+        room_name_b = room_name.encode("utf-8")
 
-    def send_packet(sock, room_name, operation, state, payload):
-        """
-        TCPパケットを生成して送信する。
+        if payload is None:
+            header = self.build_header(len(room_name_b), operation, state, 0)
+            body = room_name_b
+        else:
+            payload_b = payload.encode("utf-8")
+            header = self.build_header(len(room_name_b), operation, state, len(payload_b))
+            body = room_name_b + payload_b
 
-        処理内容:
-        - room_nameとpayloadをバイト列に変換
-        - ヘッダを生成
-          フォーマット:
-          - room_name_len : 1byte
-          - operation     : 1byte
-          - state         : 1byte
-          - payload_len   : 29byte (big endian)
-        - ヘッダ + ボディを送信
-        """
-        pass
+        sock.sendall(header)
+        sock.sendall(body)
+
+    # TCPパケットのヘッダーを作成する。
+    @staticmethod
+    def build_header(room_name_len, operation, state, payload_len):
+        return (
+            room_name_len.to_bytes(1, "big")
+            + operation.to_bytes(1, "big")
+            + state.to_bytes(1, "big")
+            + payload_len.to_bytes(29, "big")
+        )
 
 
 # -------------------------------
