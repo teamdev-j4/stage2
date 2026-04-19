@@ -174,20 +174,40 @@ class Room:
         self.name = name
         self.host_token = host_token
         self.clients = {}
-        self.lock = threading.Lock()
+        self.lock = threading.RLock()
+
+    def get_client(self, token):
+        with self.lock:
+            client = self.clients.get(token)
+            if client:
+                return client
+            else:
+                None
 
     def get_clients(self):
-        return self.clients.items()
+        return {
+            key: dict(value)
+            for key, value in self.clients.items()
+        }
+
+    def has_clients(self, token):
+        with self.lock:
+            return token in self.clients
 
     def add_client(self, token, username, addr=None):
         with self.lock:
+            # usernameの重複チェック
+            for client in self.clients.values():
+                if client["username"] == username:
+                    return False, username
+
             self.clients[token] = {
                 "username": username,
                 "addr": addr,
                 "last_seen": time.time()
             }
-        print(f'+ added {self.clients[token]["username"]}')
-        return
+            print(f'+ added {self.clients[token]["username"]}')
+            return True, username
 
     def delete_client(self, token):
         with self.lock:
@@ -196,9 +216,11 @@ class Room:
                 del self.clients[token]
 
                 if token == self.host_token:
-                    return "HOST_LEFT", f"- room host {username} left."
+                    return "HOST_LEFT", username
 
-                return "OK", f"- {username} left."
+                return "OK", username
+            else:
+                return "NOT_FOUND", username
 
 
 
