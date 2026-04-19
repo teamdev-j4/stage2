@@ -118,14 +118,10 @@ class UCRP:
 class SocketHelper:
     @staticmethod
     def recv_exact(sock, size):
-        """
-        指定されたサイズ分のデータを確実に受信する。
-
-        処理内容:
-        - sock.recvを繰り返し呼び出し、sizeバイト分取得する
-        - 途中で接続が切れた場合は例外を投げる
-
-        用途:
-        - TCPでの固定長データ受信に使用
-        """
-        pass
+        data = b""
+        while len(data) < size:
+            chunk = sock.recv(size - len(data))
+            if not chunk:
+                raise ConnectionError
+            data += chunk
+        return data
