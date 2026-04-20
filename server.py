@@ -182,7 +182,7 @@ class Room:
             if client:
                 return client
             else:
-                None
+                return None
 
     def get_clients(self):
         return {
