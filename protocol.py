@@ -94,22 +94,19 @@ class UCRP:
         """
         pass
 
+    # パケットを作成する。
+    @staticmethod
     def build_packet(room_name, token, msg):
-        """
-        UDPパケットを生成する。
+        room_name_b = room_name.encode("utf-8")
+        token_b = token.encode("utf-8")
+        msg_b = msg.encode("utf-8")
 
-        処理内容:
-        - 各データをバイト列に変換
-        - ヘッダを生成
-          フォーマット:
-          - room_name長 : 1byte
-          - token長     : 1byte
-        - ヘッダ + room_name + token + message を結合
+        header = (
+            len(room_name_b).to_bytes(1, "big")
+            + len(token_b).to_bytes(1, "big")
+        )
 
-        戻り値:
-        - bytes
-        """
-        pass
+        return header + room_name_b + token_b + msg_b
 
 
 # -------------------------------
