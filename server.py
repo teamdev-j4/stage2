@@ -166,29 +166,61 @@ class RoomManager:
         """
         pass
 
+# -------------------------------
+# ルームクラス
+# -------------------------------
 class Room:
-    def add_client(self, token, username, addr=None):
-        """
-        ルームに新しいクライアントを追加する。
+    def __init__(self, name, host_token):
+        self.name = name
+        self.host_token = host_token
+        self.clients = {}
+        self.lock = threading.RLock()
 
-        処理内容:
-        - tokenをキーにクライアント情報を保存
-        - username, addr, 最終通信時刻を記録
-        """
-        pass
+    def get_client(self, token):
+        with self.lock:
+            client = self.clients.get(token)
+            if client:
+                return client
+            else:
+                return None
+
+    def get_clients(self):
+        return {
+            key: dict(value)
+            for key, value in self.clients.items()
+        }
+
+    def has_clients(self, token):
+        with self.lock:
+            return token in self.clients
+
+    def add_client(self, token, username, addr=None):
+        with self.lock:
+            # usernameの重複チェック
+            for client in self.clients.values():
+                if client["username"] == username:
+                    return False, username
+
+            self.clients[token] = {
+                "username": username,
+                "addr": addr,
+                "last_seen": time.time()
+            }
+            print(f'+ added {self.clients[token]["username"]}')
+            return True, username
 
     def delete_client(self, token):
-        """
-        クライアントをルームから削除する。
+        with self.lock:
+            if token in self.clients:
+                username = self.clients[token]["username"]
+                del self.clients[token]
 
-        処理内容:
-        - tokenに対応するクライアントを削除
-        - ホストが退出した場合はルーム削除を通知
+                if token == self.host_token:
+                    return "HOST_LEFT", username
 
-        戻り値:
-        - ("HOST_LEFT", メッセージ) または ("OK", メッセージ)
-        """
-        pass
+                return "OK", username
+            else:
+                return "NOT_FOUND", username
 
 
 
