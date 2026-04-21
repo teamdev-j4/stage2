@@ -77,25 +77,19 @@ class TCRP:
 # UCRP (Chat room protocol / UDP)
 # -------------------------------
 class UCRP:
+    # パケットを解析する
+    @staticmethod
     def parse_packet(data):
-        """
-        UDPパケットを解析する。
+        room_name_size = data[0]
+        token_size = data[1]
+        token_start = 2 + room_name_size
+        token_end = token_start + token_size
 
-        フォーマット:
-        - 1byte : room_name長
-        - 1byte : token長
-        - 可変 : room_name
-        - 可変 : token
-        - 残り : メッセージ
+        room = data[2:token_start].decode("utf-8")
+        token = data[token_start:token_end].decode("utf-8")
+        msg = data[token_end:].decode("utf-8")
 
-        処理内容:
-        - 各フィールドを切り出し
-        - UTF-8でデコード
-
-        戻り値:
-        - (room_name, token, message)
-        """
-        pass
+        return room, token, msg
 
     # パケットを作成する。
     @staticmethod
