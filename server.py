@@ -128,8 +128,8 @@ class RoomManager:
 
             host_token = secrets.token_hex(16)
             room = Room(room_name, host_token)
-            success, _ = room.add_client(host_token, username)
-            if success:
+            ok, _ = room.add_client(host_token, username)
+            if ok:
                 print(f'[Success] room name "{room_name}" created.')
                 self.rooms[room_name] = room
                 return True, host_token
