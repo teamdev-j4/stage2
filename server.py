@@ -128,22 +128,23 @@ class RoomManager:
 
             host_token = secrets.token_hex(16)
             room = Room(room_name, host_token)
-            ok, _ = room.add_client(host_token, username)
+            ok, result = room.add_client(host_token, username)
             if ok:
                 print(f'[Success] room name "{room_name}" created.')
                 self.rooms[room_name] = room
                 return True, host_token
             else:
-                return False, "failed to add host"
+                return False, result
 
     def join_room(self, room_name, username):
         with self.lock:
             room = self.rooms.get(room_name)
-        if room is None:
-            return False, f'room "{room_name}" does not exist.'
+            if room is None:
+                return False, f'room "{room_name}" does not exist.'
 
-        token = secrets.token_hex(16)
-        ok, result = room.add_client(token, username)
+            token = secrets.token_hex(16)
+            ok, result = room.add_client(token, username)
+
         if ok:
             return True, token
         else:
@@ -202,7 +203,7 @@ class Room:
             # usernameの重複チェック
             for client in self.clients.values():
                 if client["username"] == username:
-                    return False, username
+                    return False, f'username "{username}" already exists.'
 
             self.clients[token] = {
                 "username": username,
