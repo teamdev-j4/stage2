@@ -42,6 +42,9 @@ class TCP_Server:
                 TCRP.send_packet(conn, None, operation, TCRP.STATE["response"], None)
             elif operation == TCRP.OPERATION["join_room"]:
                 TCRP.send_packet(conn, None, operation, TCRP.STATE["response"], self.room_manager.get_room_list())
+            elif operation == TCRP.OPERATION["end_sys"]:
+                print("receive end system.")
+                return
 
             operation, state, room_name, username = TCRP.recv_packet(conn)
 
@@ -49,6 +52,9 @@ class TCP_Server:
                 ok, result = self.room_manager.create_room(room_name, username)
             elif operation == TCRP.OPERATION["join_room"]:
                 ok, result = self.room_manager.join_room(room_name, username)
+            elif operation == TCRP.OPERATION["end_sys"]:
+                print("receive end system.")
+                return
             else:
                 ok, result = False, "Invalid operation"
 

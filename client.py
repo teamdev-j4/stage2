@@ -45,6 +45,7 @@ class TCP_Client:
 
             operation = self.input_operation([1, 2, 0])
             if operation == 0:
+                TCRP.send_packet(self.sock, self.room_name, operation, TCRP.STATE["request"], self.username)
                 return 0
 
             #サーバにリクエスト送信
@@ -69,6 +70,7 @@ class TCP_Client:
                     print("- 0: End system.\n")
                     operation = self.input_operation([1, 0])
                     if operation == 0:
+                        TCRP.send_packet(self.sock, self.room_name, operation, TCRP.STATE["request"], self.username)
                         return 0
                 else:
                     print("[ Room List ]")
