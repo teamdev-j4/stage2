@@ -15,6 +15,10 @@ from protocol import TCRP, UCRP
 # -------------------------------
 class TCP_Server:
     def __init__(self, room_manager):
+        self.room_manager = room_manager
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.bind(("127.0.0.1", self.PORT))
+        self.sock.listen()
         """
         TCPサーバの初期化を行う。
 
@@ -28,6 +32,16 @@ class TCP_Server:
     PORT = 9001
 
     def start(self):
+        try:
+            while True:
+                conn, addr = self.sock.accept()
+                threading.Thread(
+                    target=self.handle_room_request,
+                    args=(conn, addr),
+                    daemon=True
+                ).start()
+        finally:
+            self.sock.close()
         """
         TCPサーバを起動し、クライアントからの接続を待ち受ける。
 
@@ -38,6 +52,31 @@ class TCP_Server:
         pass
 
     def handle_room_request(self, conn, addr):
+        try:
+            operation, state, room_name, payload = TCRP.recv_packet(conn)
+            
+            username = payload
+            
+            if operation == 1:
+                success, result = self.room_manager.create_room(room_name, username)
+            elif operation == 2:
+                success, result = self.room_manager.join_room(room_name, username)
+            else:
+                success, result = False, "Invalid operation"
+                
+            if success:
+                TCRP.send_packet(conn, room_name, operation, 2, result)
+            else:
+                TCRP.send_packet(conn, room_name, operation, 1, result)
+                
+        except Exception as e:
+            try:
+                TCRP.send_packet(conn, "", 0,1, str(e))
+            except Exception:
+                pass
+        finally:
+            conn.close()
+                
         """
         クライアントからのルーム操作要求を処理する。
 

@@ -1,14 +1,21 @@
 import socket
 import threading
-
 from protocol import TCRP, UCRP
-
 # -------------------------------
 # ユーザー登録 / ルーム作成・参加
 # 担当：wmelon89
 # -------------------------------
 class TCP_Client:
+    HOST = "127.0.0.1"
+    PORT = 9001
+    
     def __init__(self, username, operation, room_name):
+        self.username = username
+        self.operation = operation
+        self.room_name = room_name
+        self.token = None
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        
         """
         TCPクライアントの初期化を行う。
 
@@ -22,6 +29,12 @@ class TCP_Client:
         pass
 
     def connect(self):
+        try:
+            self.sock.connect((self.HOST,self.PORT))
+            return True
+        except Exception:
+            return False
+        
         """
         TCPサーバに接続する。
 
@@ -32,6 +45,27 @@ class TCP_Client:
         pass
 
     def start(self):
+        try:
+            #サーバにリクエスト送信
+            TCRP.send_packet(
+                self.sock,
+                self.room_name,
+                self.operation,
+                0, #request
+                self.username
+            )    
+            #応答受信
+            operation, state, room_name, payload = TRCP.recv_packet(self.sock)
+            
+            if state == 2: #success
+                self.token = payload
+                return True
+            else:
+                print(f"[Failure]{payload}")
+                return False
+        finally:
+            self.sock.close()
+            
         """
         サーバにリクエストを送信し、トークンを取得する。
 
