@@ -169,6 +169,22 @@ class RoomManager:
 
         return False, "client not found."
 
+    def get_host_token(self, room_name):
+        with self.lock:
+            room = self.rooms.get(room_name)
+            return None if room is None else room.host_token
+
+    def get_client(self, room_name, token):
+        with self.lock:
+            room = self.rooms.get(room_name)
+            return None if room is None else room.get_client(token)
+
+    def get_clients(self, room_name):
+        with self.lock:
+            room = self.rooms.get(room_name)
+            return None if room is None else room.get_clients()
+
+
 
 # -------------------------------
 # ルームクラス
