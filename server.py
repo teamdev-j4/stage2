@@ -19,15 +19,6 @@ class TCP_Server:
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.bind(("127.0.0.1", self.PORT))
         self.sock.listen()
-        """
-        TCPサーバの初期化を行う。
-
-        初期化内容:
-        - RoomManagerへの参照を保持
-        - TCPソケットを生成
-        - 指定アドレスとポートにバインド
-        - 接続待ち状態（listen）にする
-        """
 
     PORT = 9001
 
@@ -42,33 +33,30 @@ class TCP_Server:
                 ).start()
         finally:
             self.sock.close()
-        """
-        TCPサーバを起動し、クライアントからの接続を待ち受ける。
-
-        - 無限ループで接続をacceptする
-        - 接続ごとにスレッドを作成し、handle_room_requestを実行する
-        - サーバ終了時はソケットを閉じる
-        """
-        pass
 
     def handle_room_request(self, conn, addr):
         try:
             operation, state, room_name, payload = TCRP.recv_packet(conn)
-            
-            username = payload
-            
-            if operation == 1:
-                success, result = self.room_manager.create_room(room_name, username)
-            elif operation == 2:
-                success, result = self.room_manager.join_room(room_name, username)
+
+            if operation == TCRP.OPERATION["create_room"]:
+                TCRP.send_packet(conn, None, operation, TCRP.STATE["response"], None)
+            elif operation == TCRP.OPERATION["join_room"]:
+                TCRP.send_packet(conn, None, operation, TCRP.STATE["response"], self.room_manager.get_room_list())
+
+            operation, state, room_name, username = TCRP.recv_packet(conn)
+
+            if operation == TCRP.OPERATION["create_room"]:
+                ok, result = self.room_manager.create_room(room_name, username)
+            elif operation == TCRP.OPERATION["join_room"]:
+                ok, result = self.room_manager.join_room(room_name, username)
             else:
-                success, result = False, "Invalid operation"
-                
-            if success:
-                TCRP.send_packet(conn, room_name, operation, 2, result)
+                ok, result = False, "Invalid operation"
+
+            if ok:
+                TCRP.send_packet(conn, room_name, operation, TCRP.STATE["complete"], result)
             else:
-                TCRP.send_packet(conn, room_name, operation, 1, result)
-                
+                TCRP.send_packet(conn, room_name, operation, TCRP.STATE["response"], result)
+
         except Exception as e:
             try:
                 TCRP.send_packet(conn, "", 0,1, str(e))
@@ -76,22 +64,7 @@ class TCP_Server:
                 pass
         finally:
             conn.close()
-                
-        """
-        クライアントからのルーム操作要求を処理する。
 
-        処理内容:
-        - TCRPプロトコル(TCRPのrecv_packet(conn))でパケットを受信
-        - operationに応じて以下を分岐
-            - ルーム作成(1) → self.room_manager.create_room
-            - ルーム参加(2) → self.room_manager.join_room
-            返り値で成功・失敗をチェックして処理を分岐
-        - 成功時はトークンを返す(state: 2)
-        - 失敗時はエラーメッセージを返す(state: 1)
-          (ルーム名・ユーザ名の重複、不正なコードなど)
-        - 最後に接続を閉じる
-        """
-        pass
 
 # -------------------------------
 # チャットメッセージング
@@ -223,6 +196,14 @@ class RoomManager:
             room = self.rooms.get(room_name)
             return None if room is None else room.get_clients()
 
+    # ルーム名を配列で取得
+    def get_room_list(self):
+        with self.lock:
+            room_list = self.rooms.keys()
+            if not room_list:
+                return ["The room has not been created yet."]
+            else:
+                return list(room_list)
 
 
 # -------------------------------
@@ -292,6 +273,8 @@ class ChatServer:
         self.room_manager = RoomManager()
 
     def run(self):
+        print("=== Online Chat Messenger Server ===")
+        print("exit with Ctrl+C. waiting message...")
         # 各サーバのインスタンスを作成。共通のルームマネージャーを持ってもらう。
         tcp_server = TCP_Server(self.room_manager)
         udp_server = UDP_Server(self.room_manager)
@@ -300,11 +283,17 @@ class ChatServer:
         threading.Thread(target=udp_server.start, daemon=True).start()
 
         # メインスレッド用ループ
-        while True:
-            time.sleep(1)
+        try:
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            print("\nCtrl+C received.\nServer will be shut down.")
 
 
 # python3 server.pyでサーバが起動
 if __name__ == "__main__":
-    server = ChatServer()
-    server.run()
+    try:
+        server = ChatServer()
+        server.run()
+    finally:
+        ("----- end -----")
