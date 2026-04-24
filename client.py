@@ -51,7 +51,18 @@ class TCP_Client:
 # 担当：kokinomu_blip
 # -------------------------------
 class UDP_Client:
+
     def __init__(self, username, room_name, token):
+        self.username = username
+        self.room_name = room_name
+        self.token = token
+
+        self.sock = socket(socket.AF_INET , socket.SOCK_DGRAM) #ソケット生成
+        self.server_address = ('127.0.0.1' , 9002) #サーバアドレス
+
+        self.stop_Event = threading.Event()
+
+
         """
         UDPクライアントの初期化を行う。
 
@@ -62,10 +73,25 @@ class UDP_Client:
         - サーバアドレス（IP, PORT）
         - ソケット生成
         - 終了制御用イベント（threading.Event()）
+
         """
         pass
 
+
     def start(self):
+        send_thread = threading.Thread(target=self.send_loop)
+        main_thread = threading.Thread(target=self.recv_loop)
+
+        send_thread.start()
+        main_thread.start()
+
+        send_thread.join()
+        main_thread.join()
+
+        #終了処理
+        print('See you next time!')
+        self.sock.close()
+
         """
         チャットの送受信処理を開始する。
 
@@ -77,6 +103,22 @@ class UDP_Client:
         pass
 
     def recv_loop(self):
+        self.sock.settimeout(1)
+        while not self.stop_Event.is_set() :
+            try :
+                #データを受け取り、メッセージを表示
+                data, address = self.sock.recvfrom(4096)
+                room, token, msg = UCRP.parse_packet(data)
+                print(f'{msg}')
+
+            except socket.timeout :
+                continue
+
+            except Exception as e :
+                print(e)
+                self.stop_Event.set()
+                break
+        
         """
         サーバからのメッセージを受信し表示する。
 
@@ -85,9 +127,34 @@ class UDP_Client:
         - UCRPプロトコル(parse_packet)でパケットを解析
         - メッセージを標準出力(print)に表示
         """
+
         pass
 
     def send_loop(self):
+        while not self.stop_Event.is_set() :
+            try :
+                user_msg = input('>Typing Text : ') #メッセージを入力
+
+                #4096バイトより長ければ再入力させる
+                if len(user_msg.encode('utf-8')) > 4096 :
+                    print("The message is too long")
+                    continue
+                
+                #パケット生成して送信
+                UCRP_packet = UCRP.build_packet(self.room_name , self.token , user_msg) 
+                self.sock.sendto(UCRP_packet ,(self.server_address))
+
+            #Ctrl-cが入力された場合
+            except KeyboardInterrupt :
+
+                #退出用メッセージを送信
+                left_msg = ('mL8^XTqV@gGE')
+                UCRP_packet = UCRP.build_packet(self.room_name , self.token , left_msg)
+                self.sock.sendto(UCRP_packet ,(self.server_address))
+
+                self.stop_Event.set() #フラグをTRUEに変更
+                
+
         """
         ユーザー入力(input)を取得し、サーバへ送信する。
 

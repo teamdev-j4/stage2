@@ -60,6 +60,10 @@ class TCP_Server:
 # -------------------------------
 class UDP_Server:
     def __init__(self, room_manager):
+
+        self.room_manager = room_manager
+        self.sock = socket(socket.AF_INET , socket.SOCK_DGRAM) #ソケット生成
+        self.sock.bind(('127.0.0.1' , self.PORT))
         """
         UDPサーバの初期化を行う。
 
@@ -74,6 +78,20 @@ class UDP_Server:
     MAX_PACKET_SIZE = 4096
 
     def start(self):
+        while True :
+            data, addr = self.sock.recvfrom(self.MAX_PACKET_SIZE)
+            room_name, token, msg = UCRP.parse_packet(data)
+            if not self.validate_packet(addr , room_name , token) :
+                continue
+            
+            #退出用メッセージを受け取った時
+            if msg == 'mL8^XTqV@gGE' :
+                is_succese , msg = self.room_manager.leave_room(room_name , token)
+
+            packet = UCRP.build_packet(room_name , token , msg)
+            self.broadcast(room_name , packet)
+
+
         """
         UDPサーバを起動し、チャットメッセージを処理する。
 
@@ -86,21 +104,37 @@ class UDP_Server:
             - それ以外 → 通常メッセージ
         - 同一ルーム内の全クライアントへブロードキャスト
         """
+
         pass
 
-    def validate_packet(self, addr, room, token):
+    def validate_packet(self, addr, room_name, token):
+        if room_name not in self.room_manager.rooms :
+            return False
+    
+        if not self.room_manager.get_client(room_name , token) :
+            return False
+        
+        client = self.room_manager.get_client(room_name, token)
+        client["addr"] = addr
+        
+        return True
+        
+        
         """
         受信したUDPパケットの正当性を検証する。
 
         検証内容:
         - ルームが存在するか
         - トークンがルーム内に存在するか
-        - 送信元アドレスが一致しているか
-        - 初回通信時はアドレスを登録する
+        - 通信時はアドレスを登録しなおす
         """
-        pass
 
-    def broadcast(self, room, packet):
+    def broadcast(self, room_name, packet):
+        clients = self.room_manager.get_clients(room_name)
+        if  clients is not None:
+            for client in clients.values() :
+                if client["addr"] is not None:
+                    self.sock.sendto(packet , client["addr"])
         """
         指定されたルーム内の全クライアントにパケットを送信する。
 
