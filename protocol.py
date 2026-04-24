@@ -49,8 +49,9 @@ class TCRP:
 
         if payload_len > 0:
             payload = body[room_name_len:].decode("utf-8")
-
-        data = None if not payload else json.loads(payload)
+            data = json.loads(payload)
+        else:
+            data = None
 
         return room_name, data
 
