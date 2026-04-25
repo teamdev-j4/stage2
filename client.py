@@ -28,12 +28,12 @@ class TCP_Client:
     def input_operation(nums):
         while True:
             try:
-                operation = int(input(f"> Operation ({" or ".join(map(str, nums))}): "))
+                operation = int(input(f"> Operation ({' or '.join(map(str, nums))}): "))
                 if operation in nums:
                     return operation
             except ValueError:
                 pass
-            print(f"[Failure] invalid input. you can enter {" or ".join(map(str, nums))}.")
+            print(f"[Failure] invalid input. you can enter {' or '.join(map(str, nums))}.")
 
     def start(self):
         try:
