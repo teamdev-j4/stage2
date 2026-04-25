@@ -99,12 +99,20 @@ class UDP_Server:
         while True :
             data, addr = self.sock.recvfrom(self.MAX_PACKET_SIZE)
             room_name, token, msg = UCRP.parse_packet(data)
+            
             if not self.validate_packet(addr , room_name , token) :
                 continue
             
             #退出用メッセージを受け取った時
             if msg == 'mL8^XTqV@gGE' :
                 is_succese , msg = self.room_manager.leave_room(room_name , token)
+                continue
+
+
+            #メッセージに名前を追加
+            client = self.room_manager.get_client(room_name, token)
+            username = client["username"]
+            msg = f'{username}: {msg}'
 
             packet = UCRP.build_packet(room_name , token , msg)
             self.broadcast(room_name , packet)
