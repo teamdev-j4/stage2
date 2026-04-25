@@ -62,7 +62,7 @@ class UDP_Server:
     def __init__(self, room_manager):
 
         self.room_manager = room_manager
-        self.sock = socket(socket.AF_INET , socket.SOCK_DGRAM) #ソケット生成
+        self.sock = socket.socket(socket.AF_INET , socket.SOCK_DGRAM) #ソケット生成
         self.sock.bind(('127.0.0.1' , self.PORT))
         """
         UDPサーバの初期化を行う。
