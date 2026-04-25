@@ -98,14 +98,20 @@ class UDP_Server:
                 continue
 
             #退出用メッセージを受け取った時
-            if msg == 'mL8^XTqV@gGE' :
+            if msg == UCRP.SYSTEM_MSG["leave_room"]:
                 is_succese , msg = self.room_manager.leave_room(room_name , token)
                 continue
-
 
             #メッセージに名前を追加
             client = self.room_manager.get_client(room_name, token)
             username = client["username"]
+
+            if msg == UCRP.SYSTEM_MSG["join_room"]:
+                msg = f"+ [join] {username}"
+                packet = UCRP.build_packet(room_name, token, msg)
+                self.broadcast(room_name, packet)
+                continue
+
             msg = f'{username}: {msg}'
 
             packet = UCRP.build_packet(room_name , token , msg)

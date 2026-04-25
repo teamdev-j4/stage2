@@ -95,6 +95,11 @@ class TCRP:
 # UCRP (Chat room protocol / UDP)
 # -------------------------------
 class UCRP:
+    SYSTEM_MSG = {
+        "join_room": "2=6nF_du@&XS",
+        "leave_room": "mL8^XTqV@gGE",
+    }
+
     # パケットを解析する
     @staticmethod
     def parse_packet(data):

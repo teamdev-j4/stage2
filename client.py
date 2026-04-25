@@ -112,7 +112,6 @@ class TCP_Client:
 # 担当：kokinomu_blip
 # -------------------------------
 class UDP_Client:
-    LEAVE_MSG = 'mL8^XTqV@gGE'
 
     def __init__(self, username, room_name, token):
         self.username = username
@@ -127,7 +126,7 @@ class UDP_Client:
 
 
     def start(self):
-        send_thread = threading.Thread(target=self.send_loop)
+        send_thread = threading.Thread(target=self.send_loop, daemon=True)
         send_thread.start()
 
         try:
@@ -137,7 +136,7 @@ class UDP_Client:
             print('\nCtrl+C received.')
         finally:
             #退出用メッセージを送信
-            UCRP_packet = UCRP.build_packet(self.room_name , self.token , self.LEAVE_MSG)
+            UCRP_packet = UCRP.build_packet(self.room_name , self.token , UCRP.SYSTEM_MSG["leave_room"])
             self.sock.sendto(UCRP_packet ,(self.server_address))
             self.stop_Event.set()
 
@@ -166,6 +165,8 @@ class UDP_Client:
 
 
     def send_loop(self):
+        packet = UCRP.build_packet(self.room_name, self.token, UCRP.SYSTEM_MSG["join_room"])
+        self.sock.sendto(packet, self.server_address)
         while not self.stop_Event.is_set() :
             user_msg = input('> ')
 
@@ -173,11 +174,11 @@ class UDP_Client:
             if len(user_msg.encode('utf-8')) > 4096 :
                 print("The message is too long")
                 continue
-                
+
             #パケット生成して送信
-            UCRP_packet = UCRP.build_packet(self.room_name , self.token , user_msg) 
+            UCRP_packet = UCRP.build_packet(self.room_name , self.token , user_msg)
             self.sock.sendto(UCRP_packet ,(self.server_address))
-                
+
 
 # -------------------------------
 # メイン処理
