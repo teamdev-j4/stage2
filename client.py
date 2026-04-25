@@ -154,7 +154,8 @@ class UDP_Client:
                 data, address = self.sock.recvfrom(4096)
                 room, token, msg = UCRP.parse_packet(data)
                 # 表示したいガイドは、printで即時表示する。
-                print(f"> {msg}", end="\n", flush=True)
+                print(msg)
+                print("> ", end="", flush=True)
 
             except socket.timeout :
                 continue
@@ -167,17 +168,22 @@ class UDP_Client:
 
     def send_loop(self):
         while not self.stop_Event.is_set() :
-            user_msg = input('> ')
+            # before
+            # user_msg = input('> ')
+
+            # after
+            print(f"> ", end="", flush=True)
+            user_msg = input()
 
             #4096バイトより長ければ入力させる
             if len(user_msg.encode('utf-8')) > 4096 :
                 print("The message is too long")
                 continue
-                
+
             #パケット生成して送信
-            UCRP_packet = UCRP.build_packet(self.room_name , self.token , user_msg) 
+            UCRP_packet = UCRP.build_packet(self.room_name , self.token , user_msg)
             self.sock.sendto(UCRP_packet ,(self.server_address))
-                
+
 
 # -------------------------------
 # メイン処理
