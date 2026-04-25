@@ -82,27 +82,21 @@ class UDP_Server:
         self.room_manager = room_manager
         self.sock = socket.socket(socket.AF_INET , socket.SOCK_DGRAM) #ソケット生成
         self.sock.bind(('127.0.0.1' , self.PORT))
-        """
-        UDPサーバの初期化を行う。
-
-        初期化内容:
-        - RoomManagerへの参照を保持
-        - UDPソケット生成
-        - UDPソケットをバインド
-        """
 
     PORT = 9002
-
     MAX_PACKET_SIZE = 4096
+
+    TIMEOUT = 30 # タイムアウト/タイムアウトに判定する非操作時間
+    CHECK_INTERVAL = 1 # タイムアウト/チェック間隔
 
     def start(self):
         while True :
             data, addr = self.sock.recvfrom(self.MAX_PACKET_SIZE)
             room_name, token, msg = UCRP.parse_packet(data)
-            
+
             if not self.validate_packet(addr , room_name , token) :
                 continue
-            
+
             #退出用メッセージを受け取った時
             if msg == 'mL8^XTqV@gGE' :
                 is_succese , msg = self.room_manager.leave_room(room_name , token)
@@ -118,42 +112,27 @@ class UDP_Server:
             self.broadcast(room_name , packet)
 
 
-        """
-        UDPサーバを起動し、チャットメッセージを処理する。
-
-        処理内容:
-        - クライアントからメッセージを受信
-        - パケットを解析（UDRPのparse_packet()）
-        - トークンとアドレスの検証(validate_packet)
-        - メッセージ内容に応じて処理
-            - 退室メッセージ → 退出処理
-            - それ以外 → 通常メッセージ
-        - 同一ルーム内の全クライアントへブロードキャスト
-        """
-
-        pass
 
     def validate_packet(self, addr, room_name, token):
         if room_name not in self.room_manager.rooms :
             return False
-    
+
         if not self.room_manager.get_client(room_name , token) :
             return False
-        
+
         client = self.room_manager.get_client(room_name, token)
         client["addr"] = addr
-        
-        return True
-        
-        
-        """
-        受信したUDPパケットの正当性を検証する。
 
-        検証内容:
-        - ルームが存在するか
-        - トークンがルーム内に存在するか
-        - 通信時はアドレスを登録しなおす
-        """
+        return True
+
+    # タイムアウト処理
+    def timeout_detection(self):
+        while True:
+
+            # 担当：kokinomu_blip
+
+            time.sleep(self.CHECK_INTERVAL)
+
 
     def broadcast(self, room_name, packet):
         clients = self.room_manager.get_clients(room_name)
@@ -161,14 +140,6 @@ class UDP_Server:
             for client in clients.values() :
                 if client["addr"] is not None:
                     self.sock.sendto(packet , client["addr"])
-        """
-        指定されたルーム内の全クライアントにパケットを送信する。
-
-        処理内容:
-        - ルームの全クライアントを取得
-        - 各クライアントのアドレスにsendtoで送信
-        """
-        pass
 
 
 # -------------------------------
@@ -329,6 +300,7 @@ class ChatServer:
         # デーモンスレッドで各サーバを起動
         threading.Thread(target=tcp_server.start, daemon=True).start()
         threading.Thread(target=udp_server.start, daemon=True).start()
+        threading.Thread(target=udp_server.timeout_detection, daemon=True).start()
 
         # メインスレッド用ループ
         try:
