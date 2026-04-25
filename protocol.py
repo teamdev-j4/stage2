@@ -9,6 +9,7 @@ class TCRP:
     OPERATION = {
     "create_room": 1,
     "join_room": 2,
+    "end_sys": 0,
     }
 
     STATE = {

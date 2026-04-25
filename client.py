@@ -8,73 +8,100 @@ from protocol import TCRP, UCRP
 class TCP_Client:
     HOST = "127.0.0.1"
     PORT = 9001
-    
-    def __init__(self, username, operation, room_name):
-        self.username = username
-        self.operation = operation
-        self.room_name = room_name
+
+    def __init__(self):
+        self.username = None
+        self.room_name = None
         self.token = None
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        
-        """
-        TCPクライアントの初期化を行う。
-
-        初期化内容:
-        - ユーザー名
-        - 操作種別（ルーム作成 or 参加）
-        - ルーム名
-        - Token（初期はNone）
-        - TCPソケット生成
-        """
-        pass
 
     def connect(self):
         try:
             self.sock.connect((self.HOST,self.PORT))
+            print(f"[Connected] {self.HOST}:{self.PORT} (TCP)")
             return True
         except Exception:
+            print(f"[Failure] Can't connected.")
             return False
-        
-        """
-        TCPサーバに接続する。
 
-        返り値
-        - 接続成功ならTrue
-        - 失敗ならFalse
-        """
-        pass
+    @staticmethod
+    def input_operation(nums):
+        while True:
+            try:
+                operation = int(input(f"> Operation ({' or '.join(map(str, nums))}): "))
+                if operation in nums:
+                    return operation
+            except ValueError:
+                pass
+            print(f"[Failure] invalid input. you can enter {' or '.join(map(str, nums))}.")
 
     def start(self):
         try:
+            print("=== Online Chat Messenger ===")
+            print("\n[ Operation List ]")
+            print("- 1: Create room.")
+            print("- 2: Join room.")
+            print("- 0: End system.\n")
+
+            operation = self.input_operation([1, 2, 0])
+            if operation == 0:
+                TCRP.send_packet(self.sock, self.room_name, operation, TCRP.STATE["request"], self.username)
+                return 0
+
             #サーバにリクエスト送信
             TCRP.send_packet(
                 self.sock,
                 self.room_name,
-                self.operation,
-                0, #request
+                operation,
+                TCRP.STATE["request"], #request
                 self.username
-            )    
+                )
+
             #応答受信
-            operation, state, room_name, payload = TRCP.recv_packet(self.sock)
-            
-            if state == 2: #success
+            operation, state, _, payload = TCRP.recv_packet(self.sock)
+
+            if not payload:
+                pass
+            elif payload:
+                if len(payload) == 1 and payload[0] == "The room has not been created yet.":
+                    print(f"\n[Not exist] {payload[0]}\n")
+                    print("[ Operation List ]")
+                    print("- 1: Create room.")
+                    print("- 0: End system.\n")
+                    operation = self.input_operation([1, 0])
+                    if operation == 0:
+                        TCRP.send_packet(self.sock, self.room_name, operation, TCRP.STATE["request"], self.username)
+                        return 0
+                else:
+                    print("[ Room List ]")
+                    for item in payload:
+                        print(f"- {item}")
+
+            self.room_name = input("> Room name: ")
+            self.username = input("> User name: ")
+
+            TCRP.send_packet(
+                self.sock,
+                self.room_name,
+                operation,
+                TCRP.STATE["request"],
+                self.username
+            )
+
+            operation, state, room_name, payload = TCRP.recv_packet(self.sock)
+
+            if state == TCRP.STATE["complete"]: #success
                 self.token = payload
                 return True
             else:
-                print(f"[Failure]{payload}")
+                print(payload)
                 return False
+        except KeyboardInterrupt:
+            print("\nCtrl+C received.\nChat ended.")
+            return 0
         finally:
             self.sock.close()
-            
-        """
-        サーバにリクエストを送信し、トークンを取得する。
-
-        処理内容:
-        - リクエスト送信
-        - 応答受信
-        - トークン取得
-        """
-        pass
+            print(f"[Disconnected] {self.HOST}:{self.PORT} (TCP)")
 
     def get_token(self):
         return self.token
@@ -140,30 +167,10 @@ class UDP_Client:
 # -------------------------------
 class ChatClient:
     def run(self):
-        # ユーザ入力start
-        # 既存ルームの表示機能を実装する場合、ユーザ入力（ユーザ入力start〜endまで）はTCP接続後に変更してくださいm(_ _)m
-        print("=== Online Chat Messenger ===")
-        print("[ Operation List ]")
-        print("- 1: Create room.")
-        print("- 2: Join room.")
-
-        while True:
-            try:
-                operation = int(input("> Operation (1 or 2): "))
-                if operation in (1, 2):
-                    break
-            except ValueError:
-                pass
-            print("[Failure] invalid input. you can enter 1 or 2.")
-
-        room_name = input("> Room name: ")
-        username = input("> User name: ")
-        # ユーザ入力 end
-
         # ------------------
         # ユーザ・ルーム登録
         # ------------------
-        tcp_client = TCP_Client(username, operation, room_name)
+        tcp_client = TCP_Client()
         connect = tcp_client.connect()
         if connect:
             pass
@@ -172,11 +179,14 @@ class ChatClient:
             return
 
 
-        success = tcp_client.start()
+        ok = tcp_client.start()
         # 成功していたらトークンを取得
-        if success:
+        if ok:
+            username = tcp_client.username
+            room_name = tcp_client.room_name
             token = tcp_client.get_token()
-
+        elif ok == 0:
+            return
         else:
             # 取得に失敗したら終了
             print("[Failure] Failed to obtain token.")
@@ -191,5 +201,8 @@ class ChatClient:
 
 # python3 client.pyでクライアント登録〜チャットまでの手順が開始
 if __name__ == "__main__":
-    client = ChatClient()
-    client.run()
+    try:
+        client = ChatClient()
+        client.run()
+    except KeyboardInterrupt:
+        print("\nCtrl+C received.")
