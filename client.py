@@ -57,7 +57,7 @@ class UDP_Client:
         self.room_name = room_name
         self.token = token
 
-        self.sock = socket(socket.AF_INET , socket.SOCK_DGRAM) #ソケット生成
+        self.sock = socket.socket(socket.AF_INET , socket.SOCK_DGRAM) #ソケット生成
         self.server_address = ('127.0.0.1' , 9002) #サーバアドレス
 
         self.stop_Event = threading.Event()
