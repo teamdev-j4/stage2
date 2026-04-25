@@ -112,6 +112,7 @@ class TCP_Client:
 # 担当：kokinomu_blip
 # -------------------------------
 class UDP_Client:
+    LEAVE_MSG = 'mL8^XTqV@gGE'
 
     def __init__(self, username, room_name, token):
         self.username = username
@@ -124,44 +125,26 @@ class UDP_Client:
         self.stop_Event = threading.Event()
 
 
-        """
-        UDPクライアントの初期化を行う。
-
-        設定内容:
-        - ユーザー名
-        - ルーム名
-        - 認証トークン
-        - サーバアドレス（IP, PORT）
-        - ソケット生成
-        - 終了制御用イベント（threading.Event()）
-
-        """
-        pass
-
 
     def start(self):
         send_thread = threading.Thread(target=self.send_loop)
-        main_thread = threading.Thread(target=self.recv_loop)
-
         send_thread.start()
-        main_thread.start()
 
-        send_thread.join()
-        main_thread.join()
+        try:
+            self.recv_loop()
+        #Ctrl-cが入力された場合
+        except KeyboardInterrupt :
+            print('\nCtrl+C received.')
+        finally:
+            #退出用メッセージを送信
+            UCRP_packet = UCRP.build_packet(self.room_name , self.token , self.LEAVE_MSG)
+            self.sock.sendto(UCRP_packet ,(self.server_address))
+            self.stop_Event.set()
 
-        #終了処理
-        print('See you next time!')
-        self.sock.close()
+            #終了処理
+            print('See you next time!')
+            self.sock.close()
 
-        """
-        チャットの送受信処理を開始する。
-
-        処理内容:
-        - 送信用スレッド(send_loop)を起動
-        - メインスレッドで受信処理(recv_loop)を実行
-        - Ctrl+C入力時は退出メッセージを送信し終了する
-        """
-        pass
 
     def recv_loop(self):
         self.sock.settimeout(1)
@@ -170,7 +153,8 @@ class UDP_Client:
                 #データを受け取り、メッセージを表示
                 data, address = self.sock.recvfrom(4096)
                 room, token, msg = UCRP.parse_packet(data)
-                print(f'{msg}')
+                # 表示したいガイドは、printで即時表示する。
+                print(f"> {msg}", end="\n", flush=True)
 
             except socket.timeout :
                 continue
@@ -179,55 +163,21 @@ class UDP_Client:
                 print(e)
                 self.stop_Event.set()
                 break
-        
-        """
-        サーバからのメッセージを受信し表示する。
 
-        処理内容:
-        - UDPでデータを受信
-        - UCRPプロトコル(parse_packet)でパケットを解析
-        - メッセージを標準出力(print)に表示
-        """
-
-        pass
 
     def send_loop(self):
         while not self.stop_Event.is_set() :
-            try :
-                user_msg = input('>Typing Text : ') #メッセージを入力
+            user_msg = input('> ')
 
-                #4096バイトより長ければ再入力させる
-                if len(user_msg.encode('utf-8')) > 4096 :
-                    print("The message is too long")
-                    continue
+            #4096バイトより長ければ入力させる
+            if len(user_msg.encode('utf-8')) > 4096 :
+                print("The message is too long")
+                continue
                 
-                #パケット生成して送信
-                UCRP_packet = UCRP.build_packet(self.room_name , self.token , user_msg) 
-                self.sock.sendto(UCRP_packet ,(self.server_address))
-
-            #Ctrl-cが入力された場合
-            except KeyboardInterrupt :
-
-                #退出用メッセージを送信
-                left_msg = ('mL8^XTqV@gGE')
-                UCRP_packet = UCRP.build_packet(self.room_name , self.token , left_msg)
-                self.sock.sendto(UCRP_packet ,(self.server_address))
-
-                self.stop_Event.set() #フラグをTRUEに変更
+            #パケット生成して送信
+            UCRP_packet = UCRP.build_packet(self.room_name , self.token , user_msg) 
+            self.sock.sendto(UCRP_packet ,(self.server_address))
                 
-
-        """
-        ユーザー入力(input)を取得し、サーバへ送信する。
-
-        処理内容:
-        - 標準入力からメッセージを取得
-        - 最大パケットサイズ(4096Bite)をチェック
-        - UCRPプロトコルでパケット生成(build_packet)
-        - UDPで送信(sendto())
-        - stop_eventが立ったら終了
-        """
-        pass
-
 
 # -------------------------------
 # メイン処理
