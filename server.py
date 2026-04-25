@@ -94,7 +94,11 @@ class UDP_Server:
             data, addr = self.sock.recvfrom(self.MAX_PACKET_SIZE)
             room_name, token, msg = UCRP.parse_packet(data)
 
-            if not self.validate_packet(addr , room_name , token) :
+            ok, validate_msg = self.validate_packet(addr , room_name , token)
+            if not ok:
+                packet= UCRP.build_packet(room_name, token, validate_msg)
+                print(f"[Failure] {validate_msg}")
+                self.broadcast(room_name, packet)
                 continue
 
             #退出用メッセージを受け取った時
@@ -115,15 +119,15 @@ class UDP_Server:
 
     def validate_packet(self, addr, room_name, token):
         if room_name not in self.room_manager.rooms :
-            return False
+            return False, f'[Failure] room name "{room_name}" does not exist.'
 
         if not self.room_manager.get_client(room_name , token) :
-            return False
+            return False, f'[Failure] token "{token}" is unknown token.'
 
         client = self.room_manager.get_client(room_name, token)
         client["addr"] = addr
 
-        return True
+        return True, "OK"
 
     # タイムアウト処理
     def timeout_detection(self):
