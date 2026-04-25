@@ -98,7 +98,7 @@ class UDP_Server:
             if not ok:
                 packet= UCRP.build_packet(room_name, token, validate_msg)
                 print(f"[Failure] {validate_msg}")
-                self.broadcast(room_name, packet)
+                self.sock.sendto(packet, addr)
                 continue
 
             #退出用メッセージを受け取った時
