@@ -97,7 +97,7 @@ class UDP_Server:
             ok, validate_msg = self.validate_packet(addr , room_name , token)
             if not ok:
                 packet= UCRP.build_packet(room_name, token, validate_msg)
-                print(f"[Failure] {validate_msg}")
+                print(validate_msg)
                 self.sock.sendto(packet, addr)
                 continue
 
