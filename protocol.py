@@ -1,4 +1,4 @@
-# プロトコル担当：Nonnok
+import json
 
 # -------------------------------
 # TCRP (Chat room protocol / TCP)
@@ -9,6 +9,7 @@ class TCRP:
     OPERATION = {
     "create_room": 1,
     "join_room": 2,
+    "end_sys": 0,
     }
 
     STATE = {
@@ -22,6 +23,10 @@ class TCRP:
     def recv_packet(self, sock):
         header = SocketHelper.recv_exact(sock, self.HEADER_SIZE)
         room_name_len, operation, state, payload_len = self.parse_header(header)
+
+        # bodyがない場合はNoneを返す
+        if room_name_len + payload_len == 0:
+            return operation, state, None, None
 
         body = SocketHelper.recv_exact(sock, room_name_len + payload_len)
         room_name, payload = self.parse_body(body, room_name_len, payload_len)
@@ -42,22 +47,35 @@ class TCRP:
     @staticmethod
     def parse_body(body, room_name_len, payload_len):
         room_name = body[:room_name_len].decode("utf-8")
-        payload = body[room_name_len:].decode("utf-8")
 
-        return room_name, payload
+        if payload_len > 0:
+            payload = body[room_name_len:].decode("utf-8")
+            data = json.loads(payload)
+        else:
+            data = None
+
+        return room_name, data
 
     # TCPパケットを生成して送信する。
     @classmethod
     def send_packet(self, sock, room_name, operation, state, payload):
-        room_name_b = room_name.encode("utf-8")
+        body = b""
+
+        if room_name is None:
+            room_name_len = 0
+        else:
+            room_name_b = room_name.encode("utf-8")
+            room_name_len = len(room_name_b)
+            body += room_name_b
 
         if payload is None:
-            header = self.build_header(len(room_name_b), operation, state, 0)
-            body = room_name_b
+            payload_len = 0
         else:
-            payload_b = payload.encode("utf-8")
-            header = self.build_header(len(room_name_b), operation, state, len(payload_b))
-            body = room_name_b + payload_b
+            payload_b = json.dumps(payload).encode("utf-8")
+            payload_len = len(payload_b)
+            body += payload_b
+
+        header = self.build_header(room_name_len, operation, state, payload_len)
 
         sock.sendall(header)
         sock.sendall(body)
