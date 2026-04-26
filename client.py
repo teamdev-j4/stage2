@@ -99,6 +99,8 @@ class TCP_Client:
         except KeyboardInterrupt:
             print("\nCtrl+C received.\nChat ended.")
             return 0
+        except ConnectionResetError:
+            print(f"- server stopped.\n--- system shutt down...")
         finally:
             self.sock.close()
             print(f"[Disconnected] {self.HOST}:{self.PORT} (TCP)")
@@ -112,6 +114,8 @@ class TCP_Client:
 # 担当：kokinomu_blip
 # -------------------------------
 class UDP_Client:
+    HOST = "127.0.0.1"
+    PORT = 9002
 
     def __init__(self, username, room_name, token):
         self.username = username
@@ -119,13 +123,14 @@ class UDP_Client:
         self.token = token
 
         self.sock = socket.socket(socket.AF_INET , socket.SOCK_DGRAM) #ソケット生成
-        self.server_address = ('127.0.0.1' , 9002) #サーバアドレス
+        self.server_address = (self.HOST , self.PORT) #サーバアドレス
 
         self.stop_Event = threading.Event()
 
 
 
     def start(self):
+        print(f"[Connected] {self.HOST}:{self.PORT} (UDP)")
         send_thread = threading.Thread(target=self.send_loop, daemon=True)
         send_thread.start()
 
@@ -139,7 +144,7 @@ class UDP_Client:
             UCRP_packet = UCRP.build_packet(self.room_name , self.token , UCRP.SYSTEM_MSG["leave_room"])
             self.sock.sendto(UCRP_packet ,(self.server_address))
             self.stop_Event.set()
-
+            print(f"[Disconnected] {self.HOST}:{self.PORT} (TCP)")
             #終了処理
             print('See you next time!')
             self.sock.close()
@@ -152,9 +157,18 @@ class UDP_Client:
                 #データを受け取り、メッセージを表示
                 data, address = self.sock.recvfrom(4096)
                 room, token, msg = UCRP.parse_packet(data)
-                # 表示したいガイドは、printで即時表示する。
-                print(msg)
-                print("> ", end="", flush=True)
+
+                if msg == UCRP.SYSTEM_MSG["host_leave"]:
+                    print(f"- host user left.\n--- close the room...")
+                    self.stop_Event.set()
+
+                elif msg == UCRP.SYSTEM_MSG["server_stop"]:
+                    print(f"- server stopped.\n--- system shutt down...")
+                    self.stop_Event.set()
+
+                else:
+                    print(msg)
+                    print("> ", end="", flush=True)
 
             except socket.timeout :
                 continue
@@ -162,17 +176,13 @@ class UDP_Client:
             except Exception as e :
                 print(e)
                 self.stop_Event.set()
-                break
 
 
     def send_loop(self):
         packet = UCRP.build_packet(self.room_name, self.token, UCRP.SYSTEM_MSG["join_room"])
         self.sock.sendto(packet, self.server_address)
         while not self.stop_Event.is_set() :
-            # before
-            # user_msg = input('> ')
 
-            # after
             print(f"> ", end="", flush=True)
             user_msg = input()
 
