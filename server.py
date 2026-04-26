@@ -170,7 +170,7 @@ class UDP_Server:
                 else:
                     self.sock.sendto(UCRP.build_packet(room_name, token, UCRP.SYSTEM_MSG["timeout"]), curr_client["addr"])
 
-                    timeout_msg = f"- [Timeout] {curr_client["username"]}"
+                    timeout_msg = f"- [Timeout] {curr_client['username']}"
                     self.broadcast(room_name, UCRP.build_packet(room_name, token, timeout_msg))
 
                 self.room_manager.leave_room(room_name , token)
