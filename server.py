@@ -86,7 +86,7 @@ class UDP_Server:
     PORT = 9002
     MAX_PACKET_SIZE = 4096
 
-    TIMEOUT = 30 # タイムアウト/タイムアウトに判定する非操作時間
+    TIMEOUT = 180 # タイムアウト/タイムアウトに判定する非操作時間
     CHECK_INTERVAL = 1 # タイムアウト/チェック間隔
 
     def start(self):
@@ -155,15 +155,27 @@ class UDP_Server:
             for room in list(self.room_manager.rooms.values()) :
                 for (token, client) in room.get_clients().items() :
                     last_seen = client["last_seen"]
-            
-                    #30秒以上でタイムアウト処理            
+
                     if now - last_seen > self.TIMEOUT :
                         remove_list.append((room.name , token))
                         continue
 
             for (room_name, token) in remove_list :
+                curr_client = self.room_manager.get_client(room_name, token)
+                host_token = self.room_manager.get_host_token(room_name)
+
+                if token == host_token:
+                    timeout_msg = f"- [Timeout] - host {curr_client} left, room closed."
+                    self.broadcast(room_name, UCRP.build_packet(room_name, token, UCRP.SYSTEM_MSG["host_timeout"]))
+                else:
+                    self.sock.sendto(UCRP.build_packet(room_name, token, UCRP.SYSTEM_MSG["timeout"]), curr_client["addr"])
+
+                    timeout_msg = f"- [Timeout] {curr_client['username']}"
+                    self.broadcast(room_name, UCRP.build_packet(room_name, token, timeout_msg))
+
                 self.room_manager.leave_room(room_name , token)
-            
+                print(timeout_msg)
+
             time.sleep(self.CHECK_INTERVAL)
 
 

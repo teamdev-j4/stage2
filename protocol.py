@@ -100,6 +100,8 @@ class UCRP:
         "leave_room": "mL8^XTqV@gGE",
         "host_leave": "Bxp>Yd+OS7Mp",
         "server_stop": "E|8b_hglFrq=",
+        "timeout": "7ZP$uh7=O^0s",
+        "host_timeout": "t5%Upw^{YRXT",
     }
 
     # パケットを解析する
