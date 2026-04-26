@@ -98,6 +98,8 @@ class UCRP:
     SYSTEM_MSG = {
         "join_room": "2=6nF_du@&XS",
         "leave_room": "mL8^XTqV@gGE",
+        "host_leave": "Bxp>Yd+OS7Mp",
+        "server_stop": "E|8b_hglFrq=",
     }
 
     # パケットを解析する
@@ -118,7 +120,10 @@ class UCRP:
     @staticmethod
     def build_packet(room_name, token, msg):
         room_name_b = room_name.encode("utf-8")
-        token_b = token.encode("utf-8")
+        if token is None:
+            token_b = b""
+        else:
+            token_b = token.encode("utf-8")
         msg_b = msg.encode("utf-8")
 
         header = (

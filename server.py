@@ -101,14 +101,23 @@ class UDP_Server:
                 self.sock.sendto(packet, addr)
                 continue
 
-            #退出用メッセージを受け取った時
-            if msg == UCRP.SYSTEM_MSG["leave_room"]:
-                is_succese , msg = self.room_manager.leave_room(room_name , token)
-                continue
-
             #メッセージに名前を追加
             client = self.room_manager.get_client(room_name, token)
             username = client["username"]
+
+            #退出用メッセージを受け取った時
+            if msg == UCRP.SYSTEM_MSG["leave_room"]:
+                host_token = self.room_manager.get_host_token(room_name)
+
+                if token == host_token:
+                    notice_msg = UCRP.SYSTEM_MSG["host_leave"]
+                else:
+                    notice_msg = f"- [left] {username}"
+                self.broadcast(room_name, UCRP.build_packet(room_name, token, notice_msg))
+                ok , result_msg = self.room_manager.leave_room(room_name , token)
+                print(result_msg)
+
+                continue
 
             if msg == UCRP.SYSTEM_MSG["join_room"]:
                 msg = f"+ [join] {username}"
@@ -318,6 +327,10 @@ class ChatServer:
                 time.sleep(1)
         except KeyboardInterrupt:
             print("\nCtrl+C received.\nServer will be shut down.")
+        finally:
+            rooms = udp_server.room_manager.get_room_list()
+            for room in rooms:
+                udp_server.broadcast(room, UCRP.build_packet(room, None, UCRP.SYSTEM_MSG["server_stop"]))
 
 
 # python3 server.pyでサーバが起動
