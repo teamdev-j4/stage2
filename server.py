@@ -110,6 +110,8 @@ class UDP_Server:
             client = self.room_manager.get_client(room_name, token)
             username = client["username"]
 
+            client["last_seen"] = time.time() #最後の入力時点の時間を更新
+
             if msg == UCRP.SYSTEM_MSG["join_room"]:
                 msg = f"+ [join] {username}"
                 packet = UCRP.build_packet(room_name, token, msg)
@@ -138,9 +140,21 @@ class UDP_Server:
     # タイムアウト処理
     def timeout_detection(self):
         while True:
+            now = time.time()
+            remove_list = []
 
-            # 担当：kokinomu_blip
+            for room in list(self.room_manager.rooms.values()) :
+                for (token, client) in room.get_clients().items() :
+                    last_seen = client["last_seen"]
+            
+                    #30秒以上でタイムアウト処理            
+                    if now - last_seen > self.TIMEOUT :
+                        remove_list.append((room.name , token))
+                        continue
 
+            for (room_name, token) in remove_list :
+                self.room_manager.leave_room(room_name , token)
+            
             time.sleep(self.CHECK_INTERVAL)
 
 
