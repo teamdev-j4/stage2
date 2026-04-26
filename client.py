@@ -166,6 +166,10 @@ class UDP_Client:
                     print(f"- server stopped.\n--- system shutt down...")
                     self.stop_Event.set()
 
+                elif msg == UCRP.SYSTEM_MSG["timeout"]:
+                    print(f"- server stopped.\n--- system shutt down...")
+                    self.stop_Event.set()
+
                 else:
                     print(msg)
                     print("> ", end="", flush=True)
