@@ -166,7 +166,7 @@ class UDP_Server:
 
                 if token == host_token:
                     timeout_msg = f"- [Timeout] - host {curr_client} left, room closed."
-                    self.broadcast(room_name, UCRP.build_packet(room_name, token, UCRP.SYSTEM_MSG["host_leave"]))
+                    self.broadcast(room_name, UCRP.build_packet(room_name, token, UCRP.SYSTEM_MSG["timeout_host"]))
                 else:
                     self.sock.sendto(UCRP.build_packet(room_name, token, UCRP.SYSTEM_MSG["timeout"]), curr_client["addr"])
 

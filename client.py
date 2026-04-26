@@ -167,7 +167,11 @@ class UDP_Client:
                     self.stop_Event.set()
 
                 elif msg == UCRP.SYSTEM_MSG["timeout"]:
-                    print(f"- host user timeout.\n--- system shutt down...")
+                    print(f"- timeout.\n--- system shutt down...")
+                    self.stop_Event.set()
+
+                elif msg == UCRP.SYSTEM_MSG["host_timeout"]:
+                    print(f"- host user left.\n--- close the room...")
                     self.stop_Event.set()
 
                 else:
