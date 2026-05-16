@@ -50,7 +50,7 @@ class TCP_Server:
             elif operation == TCRP.OPERATION["join_room"]:
                 ok, result = self.room_manager.join_room(room_name, username)
             elif operation == TCRP.OPERATION["end_sys"]:
-                print("receive end system.")
+                print("receive operation 0")
                 return
             else:
                 ok, result = False, "Invalid operation"
@@ -62,7 +62,7 @@ class TCP_Server:
 
         except Exception as e:
             try:
-                TCRP.send_packet(conn, "", 0,1, str(e))
+                TCRP.send_packet(conn, None, operation, TCRP.OPERATION["end_sys"], str(e))
             except Exception:
                 pass
         finally:
@@ -162,12 +162,12 @@ class UDP_Server:
                 host_token = self.room_manager.get_host_token(room_name)
 
                 if token == host_token:
-                    timeout_msg = f"- [Timeout] - host {curr_client} left, room closed."
+                    timeout_msg = f'- [Timeout] host "{curr_client["username"]}" left, "{room_name}" closed.'
                     self.broadcast(room_name, UCRP.build_packet(room_name, token, UCRP.SYSTEM_MSG["host_timeout"]))
                 else:
                     self.sock.sendto(UCRP.build_packet(room_name, token, UCRP.SYSTEM_MSG["timeout"]), curr_client["addr"])
 
-                    timeout_msg = f"- [Timeout] {curr_client['username']}"
+                    timeout_msg = f'- [Timeout] {curr_client["username"]}'
                     self.broadcast(room_name, UCRP.build_packet(room_name, token, timeout_msg))
 
                 self.room_manager.leave_room(room_name , token)
@@ -197,13 +197,13 @@ class RoomManager:
         with self.lock:
             # ルーム名の重複を排除
             if room_name in self.rooms:
-                return False, f'[Failure] room name "{room_name}" is already exists.'
+                return False, f'  [Failure] room name "{room_name}" is already exists.'
 
             host_token = secrets.token_hex(16)
             room = Room(room_name, host_token)
             ok, result = room.add_client(host_token, username)
             if ok:
-                print(f'[Success] room name "{room_name}" created.')
+                print(f'[Success] "{username}" created "{room_name}".')
                 self.rooms[room_name] = room
                 return True, host_token
             else:
@@ -213,12 +213,13 @@ class RoomManager:
         with self.lock:
             room = self.rooms.get(room_name)
             if room is None:
-                return False, f'room "{room_name}" does not exist.'
+                return False, f'  [Failure] room "{room_name}" does not exist.'
 
             token = secrets.token_hex(16)
             ok, result = room.add_client(token, username)
 
         if ok:
+            print(f"+ [join] {username} ({room_name})")
             return True, token
         else:
             return False, result
@@ -235,10 +236,10 @@ class RoomManager:
         if status == "HOST_LEFT":
             with self.lock:
                 self.rooms.pop(room_name, None)
-            return True, f"- host {username} left, room closed."
+            return True, f'- [host left] "{username}" left, "{room_name}" closed.'
 
         if status == "OK":
-            return True, f"- {username} left."
+            return True, f"- [left] {username} ({room_name})"
 
         return False, "client not found."
 
@@ -307,7 +308,6 @@ class Room:
                 "addr": addr,
                 "last_seen": time.time()
             }
-            print(f'+ added {self.clients[token]["username"]}')
             return True, username
 
     def delete_client(self, token):
