@@ -145,7 +145,7 @@ class UDP_Client:
             UCRP_packet = UCRP.build_packet(self.room_name , self.token , UCRP.SYSTEM_MSG["leave_room"])
             self.sock.sendto(UCRP_packet ,(self.server_address))
             self.stop_Event.set()
-            print(f"[Disconnected] {self.HOST}:{self.PORT} (TCP)")
+            print(f"[Disconnected] {self.HOST}:{self.PORT} (UDP)")
             #終了処理
             print('See you next time!')
             self.sock.close()
@@ -160,19 +160,19 @@ class UDP_Client:
                 room, token, msg = UCRP.parse_packet(data)
 
                 if msg == UCRP.SYSTEM_MSG["host_leave"]:
-                    print(f"- host user left.\n--- close the room...")
+                    print(f"- host user left.\n--- close {room}...")
                     self.stop_Event.set()
 
                 elif msg == UCRP.SYSTEM_MSG["server_stop"]:
-                    print(f"- server stopped.\n--- system shutt down...")
+                    print(f"- server stopped.\n--- shutdown the system...")
                     self.stop_Event.set()
 
                 elif msg == UCRP.SYSTEM_MSG["timeout"]:
-                    print(f"- timeout.\n--- system shutt down...")
+                    print(f"- you are timed out.\n--- shutdown the system...")
                     self.stop_Event.set()
 
                 elif msg == UCRP.SYSTEM_MSG["host_timeout"]:
-                    print(f"- host user left.\n--- close the room...")
+                    print(f"- host user timed out.\n--- close {room}...")
                     self.stop_Event.set()
 
                 else:
@@ -244,8 +244,5 @@ class ChatClient:
 
 # python3 client.pyでクライアント登録〜チャットまでの手順が開始
 if __name__ == "__main__":
-    try:
-        client = ChatClient()
-        client.run()
-    except KeyboardInterrupt:
-        print("\nCtrl+C received.")
+    client = ChatClient()
+    client.run()
